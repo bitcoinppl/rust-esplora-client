@@ -328,8 +328,17 @@ impl BlockingClient {
 
     /// Get transaction history for the specified address/scripthash, sorted with newest first.
     /// Returns up to 50 mempool transactions plus the first 25 confirmed transactions.
-    pub fn get_address_txns(&self, address: &Address) -> Result<Vec<Tx>, Error> {
-        let path = format!("/address/{address}/txs");
+    /// You can request more confirmed transactions using an after_txid parameter.
+    pub fn get_address_txns(
+        &self,
+        address: &Address,
+        after_txid: Option<Txid>,
+    ) -> Result<Vec<Tx>, Error> {
+        let path = match after_txid {
+            Some(after_txid) => format!("/address/{address}/txs/chain/{after_txid}"),
+            None => format!("/address/{address}/txs"),
+        };
+
         self.get_response_json(&path)
     }
 

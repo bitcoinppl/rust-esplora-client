@@ -1063,8 +1063,8 @@ mod test {
         let _miner = MINER.lock().await;
         generate_blocks_and_wait(1);
 
-        let address_txns_blocking = blocking_client.get_address_txns(&address).unwrap();
-        let address_txns_async = async_client.get_address_txns(&address).await.unwrap();
+        let address_txns_blocking = blocking_client.get_address_txns(&address, None).unwrap();
+        let address_txns_async = async_client.get_address_txns(&address, None).await.unwrap();
 
         assert_eq!(address_txns_blocking, address_txns_async);
         assert_eq!(address_txns_async[0].txid, txid);

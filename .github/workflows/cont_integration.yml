@@ -17,7 +17,6 @@ jobs:
       matrix:
         rust:
           - version: stable # STABLE
-          - version: 1.63.0 # MSRV
         runtime:
           - blocking
           - tokio
@@ -53,17 +52,9 @@ jobs:
           toolchain: ${{ matrix.rust.version }}
       - name: Set profile
         run: rustup set profile minimal
+
       - name: Update toolchain
         run: rustup update
-      - name: Pin dependencies for MSRV
-        if: matrix.rust.version == '1.63.0'
-        run: |
-          cargo update -p zstd-sys --precise "2.0.8+zstd.1.5.5"
-          cargo update -p time --precise "0.3.20"
-          cargo update -p home --precise 0.5.5
-          cargo update -p url --precise "2.5.0"
-          cargo update -p tokio --precise "1.38.1"
-          cargo update -p hyper-rustls --precise "0.24.2"
 
       - name: Build
         run: cargo build --features ${{ matrix.features }},${{ matrix.runtime != 'blocking' && matrix.runtime || '' }} --no-default-features

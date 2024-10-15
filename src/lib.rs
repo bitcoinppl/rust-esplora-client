@@ -26,7 +26,7 @@
 //! Here is an example of how to create an asynchronous client.
 //!
 //! ```no_run
-//! # #[cfg(feature = "async")]
+//! # #[cfg(all(feature = "async", feature = "tokio"))]
 //! # {
 //! use esplora_client::Builder;
 //! let builder = Builder::new("https://blockstream.info/testnet/api");
@@ -1036,7 +1036,7 @@ mod test {
     #[test]
     fn use_with_custom_runtime() {
         let builder =
-            Builder::<TestRuntime>::new_with_runtime("https://blockstream.info/testnet/api");
+            Builder::<TestRuntime>::new_custom_runtime("https://blockstream.info/testnet/api");
 
         let client = builder.build_async();
         assert!(client.is_ok());

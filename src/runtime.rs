@@ -1,4 +1,3 @@
-#[cfg(feature = "tokio")]
 use std::time::Duration;
 
 pub trait Runtime {
@@ -15,10 +14,7 @@ impl Runtime for DefaultRuntime {
 }
 
 #[cfg(feature = "async-std")]
-pub struct AsyncStd;
-
-#[cfg(feature = "async-std")]
-impl Runtime for AsyncStd {
+impl Runtime for DefaultRuntime {
     async fn sleep(duration: Duration) {
         async_std::task::sleep(duration).await;
     }

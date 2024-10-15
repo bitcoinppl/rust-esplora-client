@@ -34,7 +34,7 @@ use crate::{
 };
 
 #[derive(Debug, Clone)]
-pub struct AsyncClient<R: Runtime = DefaultRuntime> {
+pub struct AsyncClient<R = DefaultRuntime> {
     /// The URL of the Esplora Server.
     url: String,
     /// The inner [`reqwest::Client`] to make HTTP requests.

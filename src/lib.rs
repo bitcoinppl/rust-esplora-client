@@ -114,7 +114,7 @@ pub fn convert_fee_rate(target: usize, estimates: HashMap<u16, f64>) -> Option<f
 }
 
 #[derive(Debug, Clone)]
-pub struct Builder<R: Runtime = DefaultRuntime> {
+pub struct Builder<R = DefaultRuntime> {
     /// The URL of the Esplora server.
     pub base_url: String,
     /// Optional URL of the proxy to use to make requests to the Esplora server
@@ -1015,5 +1015,43 @@ mod test {
         let tx = blocking_client.get_tx(&txid).unwrap();
         let tx_async = async_client.get_tx(&txid).await.unwrap();
         assert_eq!(tx, tx_async);
+    }
+
+    #[cfg(feature = "tokio")]
+    #[test]
+    fn use_builder_with_tokio_as_normal() {
+        let builder = Builder::new("https://blockstream.info/testnet/api");
+        let client = builder.build_async();
+        assert!(client.is_ok());
+    }
+
+    #[cfg(feature = "async-std")]
+    #[test]
+    fn use_async_std_runtime() {
+        let builder = Builder::new("https://blockstream.info/testnet/api");
+        let client = builder.build_async();
+        assert!(client.is_ok());
+    }
+
+    #[cfg(not(feature = "tokio"))]
+    struct TestRuntime;
+
+    #[cfg(not(feature = "tokio"))]
+    impl Runtime for TestRuntime {
+        async fn sleep(duration: Duration) {
+            tokio::time::sleep(duration).await;
+        }
+    }
+
+    #[cfg(not(feature = "tokio"))]
+    #[test]
+    fn use_with_custom_runtime() {
+        let builder = Builder::<TestRuntime>::new_with_runtime(
+            "https://blockstream.info/testnet/api",
+            TestRuntime,
+        );
+
+        let client = builder.build_async();
+        assert!(client.is_ok());
     }
 }

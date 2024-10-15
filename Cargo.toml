@@ -24,8 +24,7 @@ log = "^0.4"
 minreq = { version = "2.11.0", features = ["json-using-serde"], optional = true }
 reqwest = { version = "0.12",  features = ["json"], default-features = false, optional = true }
 
-# async runtime
-async-std = { version = "1.13", optional = true }
+# default async runtime
 tokio = { version = "1.40", features = ["time"], optional = true }
 
 [dev-dependencies]
@@ -43,8 +42,6 @@ blocking-https-native = ["blocking", "minreq/https-native"]
 blocking-https-bundled = ["blocking", "minreq/https-bundled"]
 
 tokio = ["dep:tokio", "async"]
-async-std = ["dep:async-std", "async"]
-
 async = ["reqwest", "reqwest/socks"]
 async-https = ["async", "reqwest/default-tls"]
 async-https-native = ["async", "reqwest/native-tls"]

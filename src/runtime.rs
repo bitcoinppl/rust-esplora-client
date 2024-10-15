@@ -12,10 +12,3 @@ impl Runtime for DefaultRuntime {
         tokio::time::sleep(duration).await;
     }
 }
-
-#[cfg(feature = "async-std")]
-impl Runtime for DefaultRuntime {
-    async fn sleep(duration: Duration) {
-        async_std::task::sleep(duration).await;
-    }
-}

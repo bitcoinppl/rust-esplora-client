@@ -12,6 +12,7 @@
 //! Esplora by way of `reqwest` HTTP client.
 
 use std::collections::HashMap;
+use std::marker::PhantomData;
 use std::str::FromStr;
 
 use bitcoin::consensus::{deserialize, serialize, Decodable, Encodable};
@@ -26,24 +27,30 @@ use log::{debug, error, info, trace};
 
 use reqwest::{header, Client, Response};
 
+use crate::runtime::{DefaultRuntime, Runtime};
 use crate::{
     BlockStatus, BlockSummary, Builder, Error, MerkleProof, OutputStatus, Tx, TxStatus,
     BASE_BACKOFF_MILLIS, RETRYABLE_ERROR_CODES,
 };
 
 #[derive(Debug, Clone)]
-pub struct AsyncClient {
+pub struct AsyncClient<R: Runtime = DefaultRuntime> {
     /// The URL of the Esplora Server.
     url: String,
     /// The inner [`reqwest::Client`] to make HTTP requests.
     client: Client,
     /// Number of times to retry a request
     max_retries: usize,
+
+    runtime: PhantomData<R>,
 }
 
-impl AsyncClient {
+impl<R> AsyncClient<R>
+where
+    R: Runtime,
+{
     /// Build an async client from a builder
-    pub fn from_builder(builder: Builder) -> Result<Self, Error> {
+    pub fn from_builder(builder: Builder<R>) -> Result<Self, Error> {
         let mut client_builder = Client::builder();
 
         #[cfg(not(target_arch = "wasm32"))]
@@ -72,15 +79,16 @@ impl AsyncClient {
             url: builder.base_url,
             client: client_builder.build()?,
             max_retries: builder.max_retries,
+            runtime: PhantomData,
         })
     }
 
-    /// Build an async client from the base url and [`Client`]
     pub fn from_client(url: String, client: Client) -> Self {
         AsyncClient {
             url,
             client,
             max_retries: crate::DEFAULT_MAX_RETRIES,
+            runtime: PhantomData,
         }
     }
 
@@ -433,7 +441,7 @@ impl AsyncClient {
         loop {
             match self.client.get(url).send().await? {
                 resp if attempts < self.max_retries && is_status_retryable(resp.status()) => {
-                    crate::runtime::sleep(delay).await;
+                    R::sleep(delay).await;
                     attempts += 1;
                     delay *= 2;
                 }

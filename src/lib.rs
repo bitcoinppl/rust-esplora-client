@@ -85,6 +85,7 @@ pub use api::*;
 pub use blocking::BlockingClient;
 #[cfg(feature = "async")]
 pub use r#async::AsyncClient;
+use runtime::{DefaultRuntime, Runtime};
 
 /// Response status codes for which the request may be retried.
 const RETRYABLE_ERROR_CODES: [u16; 3] = [
@@ -113,7 +114,7 @@ pub fn convert_fee_rate(target: usize, estimates: HashMap<u16, f64>) -> Option<f
 }
 
 #[derive(Debug, Clone)]
-pub struct Builder {
+pub struct Builder<R: Runtime = DefaultRuntime> {
     /// The URL of the Esplora server.
     pub base_url: String,
     /// Optional URL of the proxy to use to make requests to the Esplora server
@@ -135,6 +136,8 @@ pub struct Builder {
     pub headers: HashMap<String, String>,
     /// Max retries
     pub max_retries: usize,
+    /// Async runtime, trait must implement `sleep` function, default is `tokio`
+    pub runtime: R,
 }
 
 impl Builder {
@@ -146,6 +149,31 @@ impl Builder {
             timeout: None,
             headers: HashMap::new(),
             max_retries: DEFAULT_MAX_RETRIES,
+            runtime: DefaultRuntime,
+        }
+    }
+
+    /// Build a blocking client from builder
+    #[cfg(feature = "blocking")]
+    pub fn build_blocking(self) -> BlockingClient {
+        BlockingClient::from_builder(self)
+    }
+}
+
+impl<R: Runtime> Builder<R>
+where
+    R: Runtime,
+{
+    /// New with runtime
+    #[cfg(feature = "async")]
+    pub fn new_with_runtime(base_url: &str, runtime: R) -> Self {
+        Builder {
+            base_url: base_url.to_string(),
+            proxy: None,
+            timeout: None,
+            headers: HashMap::new(),
+            max_retries: DEFAULT_MAX_RETRIES,
+            runtime,
         }
     }
 
@@ -174,15 +202,9 @@ impl Builder {
         self
     }
 
-    /// Build a blocking client from builder
-    #[cfg(feature = "blocking")]
-    pub fn build_blocking(self) -> BlockingClient {
-        BlockingClient::from_builder(self)
-    }
-
     // Build an asynchronous client from builder
     #[cfg(feature = "async")]
-    pub fn build_async(self) -> Result<AsyncClient, Error> {
+    pub fn build_async(self) -> Result<AsyncClient<R>, Error> {
         AsyncClient::from_builder(self)
     }
 }

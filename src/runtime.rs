@@ -1,8 +1,25 @@
 #[cfg(feature = "tokio")]
-pub use tokio::time::sleep;
+use std::time::Duration;
+
+pub trait Runtime {
+    fn sleep(duration: Duration) -> impl std::future::Future<Output = ()> + Send;
+}
+
+pub struct DefaultRuntime;
+
+#[cfg(feature = "tokio")]
+impl Runtime for DefaultRuntime {
+    async fn sleep(duration: Duration) {
+        tokio::time::sleep(duration).await;
+    }
+}
 
 #[cfg(feature = "async-std")]
-pub use async_std::task::sleep;
+pub struct AsyncStd;
 
-#[cfg(not(any(feature = "tokio", feature = "async-std")))]
-compile_error!("Either 'tokio' or 'async-std' feature must be enabled");
+#[cfg(feature = "async-std")]
+impl Runtime for AsyncStd {
+    async fn sleep(duration: Duration) {
+        async_std::task::sleep(duration).await;
+    }
+}

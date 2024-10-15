@@ -66,10 +66,10 @@
 
 #![allow(clippy::result_large_err)]
 
-use std::collections::HashMap;
 use std::fmt;
 use std::num::TryFromIntError;
 use std::time::Duration;
+use std::{collections::HashMap, marker::PhantomData};
 
 pub mod api;
 
@@ -137,7 +137,7 @@ pub struct Builder<R = DefaultRuntime> {
     /// Max retries
     pub max_retries: usize,
     /// Async runtime, trait must implement `sleep` function, default is `tokio`
-    pub runtime: R,
+    pub runtime: PhantomData<R>,
 }
 
 impl Builder {
@@ -149,7 +149,7 @@ impl Builder {
             timeout: None,
             headers: HashMap::new(),
             max_retries: DEFAULT_MAX_RETRIES,
-            runtime: DefaultRuntime,
+            runtime: PhantomData,
         }
     }
 
@@ -164,16 +164,16 @@ impl<R: Runtime> Builder<R>
 where
     R: Runtime,
 {
-    /// New with runtime
+    /// Instantiate a new builder, with a custom runtime
     #[cfg(feature = "async")]
-    pub fn new_with_runtime(base_url: &str, runtime: R) -> Self {
+    pub fn new_custom_runtime(base_url: &str) -> Self {
         Builder {
             base_url: base_url.to_string(),
             proxy: None,
             timeout: None,
             headers: HashMap::new(),
             max_retries: DEFAULT_MAX_RETRIES,
-            runtime,
+            runtime: PhantomData,
         }
     }
 
@@ -1046,10 +1046,8 @@ mod test {
     #[cfg(not(feature = "tokio"))]
     #[test]
     fn use_with_custom_runtime() {
-        let builder = Builder::<TestRuntime>::new_with_runtime(
-            "https://blockstream.info/testnet/api",
-            TestRuntime,
-        );
+        let builder =
+            Builder::<TestRuntime>::new_with_runtime("https://blockstream.info/testnet/api");
 
         let client = builder.build_async();
         assert!(client.is_ok());

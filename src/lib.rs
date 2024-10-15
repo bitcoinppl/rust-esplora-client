@@ -78,14 +78,14 @@ pub mod r#async;
 #[cfg(feature = "blocking")]
 pub mod blocking;
 #[cfg(feature = "async")]
-pub mod runtime;
+pub mod sleeper;
 
 pub use api::*;
 #[cfg(feature = "blocking")]
 pub use blocking::BlockingClient;
 #[cfg(feature = "async")]
 pub use r#async::AsyncClient;
-use runtime::{DefaultRuntime, Runtime};
+use sleeper::{DefaultSleeper, Sleeper};
 
 /// Response status codes for which the request may be retried.
 const RETRYABLE_ERROR_CODES: [u16; 3] = [
@@ -114,7 +114,7 @@ pub fn convert_fee_rate(target: usize, estimates: HashMap<u16, f64>) -> Option<f
 }
 
 #[derive(Debug, Clone)]
-pub struct Builder<R = DefaultRuntime> {
+pub struct Builder<S = DefaultSleeper> {
     /// The URL of the Esplora server.
     pub base_url: String,
     /// Optional URL of the proxy to use to make requests to the Esplora server
@@ -137,7 +137,7 @@ pub struct Builder<R = DefaultRuntime> {
     /// Max retries
     pub max_retries: usize,
     /// Async runtime, trait must implement `sleep` function, default is `tokio`
-    pub runtime: PhantomData<R>,
+    pub runtime: PhantomData<S>,
 }
 
 impl Builder {
@@ -160,9 +160,9 @@ impl Builder {
     }
 }
 
-impl<R: Runtime> Builder<R>
+impl<S: Sleeper> Builder<S>
 where
-    R: Runtime,
+    S: Sleeper,
 {
     /// Instantiate a new builder, with a custom runtime
     #[cfg(feature = "async")]
@@ -204,7 +204,7 @@ where
 
     // Build an asynchronous client from builder
     #[cfg(feature = "async")]
-    pub fn build_async(self) -> Result<AsyncClient<R>, Error> {
+    pub fn build_async(self) -> Result<AsyncClient<S>, Error> {
         AsyncClient::from_builder(self)
     }
 }
@@ -1029,7 +1029,7 @@ mod test {
     struct TestRuntime;
 
     #[cfg(not(feature = "tokio"))]
-    impl Runtime for TestRuntime {
+    impl Sleeper for TestRuntime {
         async fn sleep(duration: Duration) {
             tokio::time::sleep(duration).await;
         }

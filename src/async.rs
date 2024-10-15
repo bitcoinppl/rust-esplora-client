@@ -27,14 +27,14 @@ use log::{debug, error, info, trace};
 
 use reqwest::{header, Client, Response};
 
-use crate::runtime::{DefaultRuntime, Runtime};
+use crate::sleeper::{DefaultSleeper, Sleeper};
 use crate::{
     BlockStatus, BlockSummary, Builder, Error, MerkleProof, OutputStatus, Tx, TxStatus,
     BASE_BACKOFF_MILLIS, RETRYABLE_ERROR_CODES,
 };
 
 #[derive(Debug, Clone)]
-pub struct AsyncClient<R = DefaultRuntime> {
+pub struct AsyncClient<S = DefaultSleeper> {
     /// The URL of the Esplora Server.
     url: String,
     /// The inner [`reqwest::Client`] to make HTTP requests.
@@ -42,15 +42,15 @@ pub struct AsyncClient<R = DefaultRuntime> {
     /// Number of times to retry a request
     max_retries: usize,
 
-    runtime: PhantomData<R>,
+    runtime: PhantomData<S>,
 }
 
-impl<R> AsyncClient<R>
+impl<S> AsyncClient<S>
 where
-    R: Runtime,
+    S: Sleeper,
 {
     /// Build an async client from a builder
-    pub fn from_builder(builder: Builder<R>) -> Result<Self, Error> {
+    pub fn from_builder(builder: Builder<S>) -> Result<Self, Error> {
         let mut client_builder = Client::builder();
 
         #[cfg(not(target_arch = "wasm32"))]
@@ -441,7 +441,7 @@ where
         loop {
             match self.client.get(url).send().await? {
                 resp if attempts < self.max_retries && is_status_retryable(resp.status()) => {
-                    R::sleep(delay).await;
+                    S::sleep(delay).await;
                     attempts += 1;
                     delay *= 2;
                 }

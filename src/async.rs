@@ -45,10 +45,7 @@ pub struct AsyncClient<S = DefaultSleeper> {
     runtime: PhantomData<S>,
 }
 
-impl<S> AsyncClient<S>
-where
-    S: Sleeper,
-{
+impl<S: Sleeper> AsyncClient<S> {
     /// Build an async client from a builder
     pub fn from_builder(builder: Builder<S>) -> Result<Self, Error> {
         let mut client_builder = Client::builder();

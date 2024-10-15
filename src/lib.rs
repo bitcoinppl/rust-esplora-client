@@ -160,10 +160,7 @@ impl Builder {
     }
 }
 
-impl<S: Sleeper> Builder<S>
-where
-    S: Sleeper,
-{
+impl<S: Sleeper> Builder<S> {
     /// Instantiate a new builder, with a custom runtime
     #[cfg(feature = "async")]
     pub fn new_custom_runtime(base_url: &str) -> Self {

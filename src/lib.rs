@@ -77,7 +77,6 @@ pub mod api;
 pub mod r#async;
 #[cfg(feature = "blocking")]
 pub mod blocking;
-#[cfg(feature = "async")]
 pub mod sleeper;
 
 pub use api::*;
@@ -1014,7 +1013,7 @@ mod test {
         assert_eq!(tx, tx_async);
     }
 
-    #[cfg(feature = "tokio")]
+    #[cfg(all(feature = "async", feature = "tokio"))]
     #[test]
     fn use_builder_with_tokio_as_normal() {
         let builder = Builder::new("https://blockstream.info/testnet/api");
@@ -1022,17 +1021,17 @@ mod test {
         assert!(client.is_ok());
     }
 
-    #[cfg(not(feature = "tokio"))]
+    #[cfg(all(feature = "async", not(feature = "tokio")))]
     struct TestRuntime;
 
-    #[cfg(not(feature = "tokio"))]
+    #[cfg(all(feature = "async", not(feature = "tokio")))]
     impl Sleeper for TestRuntime {
         async fn sleep(duration: Duration) {
             tokio::time::sleep(duration).await;
         }
     }
 
-    #[cfg(not(feature = "tokio"))]
+    #[cfg(all(feature = "async", not(feature = "tokio")))]
     #[test]
     fn use_with_custom_runtime() {
         let builder =

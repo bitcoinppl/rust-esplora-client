@@ -4,6 +4,7 @@ pub trait Sleeper {
     fn sleep(duration: Duration) -> impl std::future::Future<Output = ()> + Send;
 }
 
+#[derive(Debug, Clone, Copy)]
 pub struct DefaultSleeper;
 
 #[cfg(feature = "tokio")]

@@ -173,6 +173,14 @@ impl<S: Sleeper> Builder<S> {
         }
     }
 
+    // Build an asynchronous client from builder
+    #[cfg(feature = "async")]
+    pub fn build_async(self) -> Result<AsyncClient<S>, Error> {
+        AsyncClient::from_builder(self)
+    }
+}
+
+impl<S> Builder<S> {
     /// Set the proxy of the builder
     pub fn proxy(mut self, proxy: &str) -> Self {
         self.proxy = Some(proxy.to_string());
@@ -196,12 +204,6 @@ impl<S: Sleeper> Builder<S> {
     pub fn max_retries(mut self, count: usize) -> Self {
         self.max_retries = count;
         self
-    }
-
-    // Build an asynchronous client from builder
-    #[cfg(feature = "async")]
-    pub fn build_async(self) -> Result<AsyncClient<S>, Error> {
-        AsyncClient::from_builder(self)
     }
 }
 

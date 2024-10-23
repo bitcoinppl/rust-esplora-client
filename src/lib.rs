@@ -136,7 +136,7 @@ pub struct Builder<S = DefaultSleeper> {
     /// Max retries
     pub max_retries: usize,
     /// Async runtime, trait must implement `sleep` function, default is `tokio`
-    pub runtime: PhantomData<S>,
+    marker: PhantomData<S>,
 }
 
 impl Builder {

@@ -77,6 +77,7 @@ pub mod api;
 pub mod r#async;
 #[cfg(feature = "blocking")]
 pub mod blocking;
+#[cfg(feature = "async")]
 pub mod sleeper;
 
 pub use api::*;
@@ -148,7 +149,7 @@ impl Builder {
             timeout: None,
             headers: HashMap::new(),
             max_retries: DEFAULT_MAX_RETRIES,
-            runtime: PhantomData,
+            marker: PhantomData,
         }
     }
 
@@ -169,7 +170,7 @@ impl<S: Sleeper> Builder<S> {
             timeout: None,
             headers: HashMap::new(),
             max_retries: DEFAULT_MAX_RETRIES,
-            runtime: PhantomData,
+            marker: PhantomData,
         }
     }
 

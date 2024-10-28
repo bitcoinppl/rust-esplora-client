@@ -85,6 +85,7 @@ pub use api::*;
 pub use blocking::BlockingClient;
 #[cfg(feature = "async")]
 pub use r#async::AsyncClient;
+#[cfg(feature = "async")]
 use sleeper::{DefaultSleeper, Sleeper};
 
 /// Response status codes for which the request may be retried.

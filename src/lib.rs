@@ -1031,6 +1031,7 @@ mod test {
     struct TestRuntime;
 
     #[cfg(all(feature = "async", not(feature = "tokio")))]
+    #[async_trait::async_trait]
     impl Sleeper for TestRuntime {
         async fn sleep(duration: Duration) {
             tokio::time::sleep(duration).await;

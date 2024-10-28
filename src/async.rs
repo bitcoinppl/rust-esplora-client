@@ -27,10 +27,10 @@ use log::{debug, error, info, trace};
 
 use reqwest::{header, Client, Response};
 
-use crate::sleeper::{DefaultSleeper, Sleeper};
+use crate::sleeper::Sleeper;
 use crate::{
-    BlockStatus, BlockSummary, Builder, Error, MerkleProof, OutputStatus, Tx, TxStatus,
-    BASE_BACKOFF_MILLIS, RETRYABLE_ERROR_CODES,
+    BlockStatus, BlockSummary, Builder, DefaultSleeper, Error, MerkleProof, OutputStatus, Tx,
+    TxStatus, BASE_BACKOFF_MILLIS, RETRYABLE_ERROR_CODES,
 };
 
 #[derive(Debug, Clone)]

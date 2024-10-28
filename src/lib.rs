@@ -86,7 +86,7 @@ pub use blocking::BlockingClient;
 #[cfg(feature = "async")]
 pub use r#async::AsyncClient;
 #[cfg(feature = "async")]
-use sleeper::{DefaultSleeper, Sleeper};
+use sleeper::Sleeper;
 
 /// Response status codes for which the request may be retried.
 const RETRYABLE_ERROR_CODES: [u16; 3] = [
@@ -140,6 +140,9 @@ pub struct Builder<S = DefaultSleeper> {
     /// Async runtime, trait must implement `sleep` function, default is `tokio`
     marker: PhantomData<S>,
 }
+
+#[derive(Debug, Clone, Copy)]
+pub struct DefaultSleeper;
 
 impl Builder {
     /// Instantiate a new builder

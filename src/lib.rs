@@ -161,9 +161,9 @@ impl Builder {
     }
 }
 
+#[cfg(feature = "async")]
 impl<S: Sleeper> Builder<S> {
     /// Instantiate a new builder, with a custom runtime
-    #[cfg(feature = "async")]
     pub fn new_custom_runtime(base_url: &str) -> Self {
         Builder {
             base_url: base_url.to_string(),
@@ -176,7 +176,6 @@ impl<S: Sleeper> Builder<S> {
     }
 
     // Build an asynchronous client from builder
-    #[cfg(feature = "async")]
     pub fn build_async(self) -> Result<AsyncClient<S>, Error> {
         AsyncClient::from_builder(self)
     }

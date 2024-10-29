@@ -27,7 +27,6 @@ use log::{debug, error, info, trace};
 
 use reqwest::{header, Client, Response};
 
-use crate::sleeper::Sleeper;
 use crate::{
     BlockStatus, BlockSummary, Builder, DefaultSleeper, Error, MerkleProof, OutputStatus, Tx,
     TxStatus, BASE_BACKOFF_MILLIS, RETRYABLE_ERROR_CODES,
@@ -450,4 +449,17 @@ impl<S: Sleeper> AsyncClient<S> {
 
 fn is_status_retryable(status: reqwest::StatusCode) -> bool {
     RETRYABLE_ERROR_CODES.contains(&status.as_u16())
+}
+
+#[async_trait::async_trait]
+pub trait Sleeper {
+    async fn sleep(duration: std::time::Duration);
+}
+
+#[cfg(feature = "tokio")]
+#[async_trait::async_trait]
+impl Sleeper for crate::DefaultSleeper {
+    async fn sleep(duration: std::time::Duration) {
+        tokio::time::sleep(duration).await;
+    }
 }

@@ -77,16 +77,12 @@ pub mod api;
 pub mod r#async;
 #[cfg(feature = "blocking")]
 pub mod blocking;
-#[cfg(feature = "async")]
-pub mod sleeper;
 
 pub use api::*;
 #[cfg(feature = "blocking")]
 pub use blocking::BlockingClient;
 #[cfg(feature = "async")]
 pub use r#async::AsyncClient;
-#[cfg(feature = "async")]
-use sleeper::Sleeper;
 
 /// Response status codes for which the request may be retried.
 const RETRYABLE_ERROR_CODES: [u16; 3] = [
@@ -165,7 +161,7 @@ impl Builder {
 }
 
 #[cfg(feature = "async")]
-impl<S: Sleeper> Builder<S> {
+impl<S: r#async::Sleeper> Builder<S> {
     /// Instantiate a new builder, with a custom runtime
     pub fn new_custom_runtime(base_url: &str) -> Self {
         Builder {
@@ -1028,23 +1024,26 @@ mod test {
     }
 
     #[cfg(all(feature = "async", not(feature = "tokio")))]
-    struct TestRuntime;
+    mod custom_async_runtime {
+        use super::*;
+        use crate::r#async::Sleeper;
 
-    #[cfg(all(feature = "async", not(feature = "tokio")))]
-    #[async_trait::async_trait]
-    impl Sleeper for TestRuntime {
-        async fn sleep(duration: Duration) {
-            tokio::time::sleep(duration).await;
+        struct TestRuntime;
+
+        #[async_trait::async_trait]
+        impl Sleeper for TestRuntime {
+            async fn sleep(duration: Duration) {
+                tokio::time::sleep(duration).await;
+            }
         }
-    }
 
-    #[cfg(all(feature = "async", not(feature = "tokio")))]
-    #[test]
-    fn use_with_custom_runtime() {
-        let builder =
-            Builder::<TestRuntime>::new_custom_runtime("https://blockstream.info/testnet/api");
+        #[test]
+        fn use_with_custom_runtime() {
+            let builder =
+                Builder::<TestRuntime>::new_custom_runtime("https://blockstream.info/testnet/api");
 
-        let client = builder.build_async();
-        assert!(client.is_ok());
+            let client = builder.build_async();
+            assert!(client.is_ok());
+        }
     }
 }

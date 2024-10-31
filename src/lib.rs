@@ -66,13 +66,15 @@
 
 #![allow(clippy::result_large_err)]
 
+use std::collections::HashMap;
 use std::fmt;
 use std::num::TryFromIntError;
 use std::time::Duration;
-use std::{collections::HashMap, marker::PhantomData};
+
+#[cfg(feature = "async")]
+use r#async::Sleeper;
 
 pub mod api;
-
 #[cfg(feature = "async")]
 pub mod r#async;
 #[cfg(feature = "blocking")]
@@ -111,7 +113,7 @@ pub fn convert_fee_rate(target: usize, estimates: HashMap<u16, f64>) -> Option<f
 }
 
 #[derive(Debug, Clone)]
-pub struct Builder<S = DefaultSleeper> {
+pub struct Builder {
     /// The URL of the Esplora server.
     pub base_url: String,
     /// Optional URL of the proxy to use to make requests to the Esplora server
@@ -133,12 +135,7 @@ pub struct Builder<S = DefaultSleeper> {
     pub headers: HashMap<String, String>,
     /// Max retries
     pub max_retries: usize,
-    /// Async runtime, trait must implement `sleep` function, default is `tokio`
-    marker: PhantomData<S>,
 }
-
-#[derive(Debug, Clone, Copy)]
-pub struct DefaultSleeper;
 
 impl Builder {
     /// Instantiate a new builder
@@ -149,38 +146,9 @@ impl Builder {
             timeout: None,
             headers: HashMap::new(),
             max_retries: DEFAULT_MAX_RETRIES,
-            marker: PhantomData,
         }
     }
 
-    /// Build a blocking client from builder
-    #[cfg(feature = "blocking")]
-    pub fn build_blocking(self) -> BlockingClient {
-        BlockingClient::from_builder(self)
-    }
-}
-
-#[cfg(feature = "async")]
-impl<S: r#async::Sleeper> Builder<S> {
-    /// Instantiate a new builder, with a custom runtime
-    pub fn new_custom_runtime(base_url: &str) -> Self {
-        Builder {
-            base_url: base_url.to_string(),
-            proxy: None,
-            timeout: None,
-            headers: HashMap::new(),
-            max_retries: DEFAULT_MAX_RETRIES,
-            marker: PhantomData,
-        }
-    }
-
-    // Build an asynchronous client from builder
-    pub fn build_async(self) -> Result<AsyncClient<S>, Error> {
-        AsyncClient::from_builder(self)
-    }
-}
-
-impl<S> Builder<S> {
     /// Set the proxy of the builder
     pub fn proxy(mut self, proxy: &str) -> Self {
         self.proxy = Some(proxy.to_string());
@@ -204,6 +172,25 @@ impl<S> Builder<S> {
     pub fn max_retries(mut self, count: usize) -> Self {
         self.max_retries = count;
         self
+    }
+
+    /// Build a blocking client from builder
+    #[cfg(feature = "blocking")]
+    pub fn build_blocking(self) -> BlockingClient {
+        BlockingClient::from_builder(self)
+    }
+
+    /// Build an asynchronous client from builder
+    #[cfg(feature = "tokio")]
+    pub fn build_async(self) -> Result<AsyncClient, Error> {
+        AsyncClient::from_builder(self)
+    }
+
+    /// Build an asynchronous client from builder where the returned client uses a
+    /// user-defined [`Sleeper`].
+    #[cfg(feature = "async")]
+    pub fn build_async_with_sleeper<S: Sleeper>(self) -> Result<AsyncClient<S>, Error> {
+        AsyncClient::from_builder(self)
     }
 }
 
@@ -284,6 +271,7 @@ mod test {
             bitcoind::bitcoincore_rpc::json::AddressType, bitcoind::bitcoincore_rpc::RpcApi,
             electrum_client::ElectrumApi,
         },
+        r#async::DefaultSleeper,
         std::time::Duration,
         tokio::sync::OnceCell,
     };
@@ -342,7 +330,9 @@ mod test {
         let blocking_client = builder.build_blocking();
 
         let builder_async = Builder::new(&format!("http://{}", esplora_url));
-        let async_client = builder_async.build_async().unwrap();
+        let async_client = builder_async
+            .build_async_with_sleeper::<DefaultSleeper>()
+            .unwrap();
 
         (blocking_client, async_client)
     }
@@ -1015,35 +1005,10 @@ mod test {
         assert_eq!(tx, tx_async);
     }
 
-    #[cfg(all(feature = "async", feature = "tokio"))]
+    #[cfg(feature = "tokio")]
     #[test]
     fn use_builder_with_tokio_as_normal() {
         let builder = Builder::new("https://blockstream.info/testnet/api");
-        let client = builder.build_async();
-        assert!(client.is_ok());
-    }
-
-    #[cfg(all(feature = "async", not(feature = "tokio")))]
-    mod custom_async_runtime {
-        use super::*;
-        use crate::r#async::Sleeper;
-
-        struct TestRuntime;
-
-        #[async_trait::async_trait]
-        impl Sleeper for TestRuntime {
-            async fn sleep(duration: Duration) {
-                tokio::time::sleep(duration).await;
-            }
-        }
-
-        #[test]
-        fn use_with_custom_runtime() {
-            let builder =
-                Builder::<TestRuntime>::new_custom_runtime("https://blockstream.info/testnet/api");
-
-            let client = builder.build_async();
-            assert!(client.is_ok());
-        }
+        let _client = builder.build_async().unwrap();
     }
 }

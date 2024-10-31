@@ -11,9 +11,11 @@
 
 //! Esplora by way of `reqwest` HTTP client.
 
+use async_trait::async_trait;
 use std::collections::HashMap;
 use std::marker::PhantomData;
 use std::str::FromStr;
+use std::time::Duration;
 
 use bitcoin::consensus::{deserialize, serialize, Decodable, Encodable};
 use bitcoin::hashes::{sha256, Hash};
@@ -28,8 +30,8 @@ use log::{debug, error, info, trace};
 use reqwest::{header, Client, Response};
 
 use crate::{
-    BlockStatus, BlockSummary, Builder, DefaultSleeper, Error, MerkleProof, OutputStatus, Tx,
-    TxStatus, BASE_BACKOFF_MILLIS, RETRYABLE_ERROR_CODES,
+    BlockStatus, BlockSummary, Builder, Error, MerkleProof, OutputStatus, Tx, TxStatus,
+    BASE_BACKOFF_MILLIS, RETRYABLE_ERROR_CODES,
 };
 
 #[derive(Debug, Clone)]
@@ -41,12 +43,12 @@ pub struct AsyncClient<S = DefaultSleeper> {
     /// Number of times to retry a request
     max_retries: usize,
 
-    runtime: PhantomData<S>,
+    marker: PhantomData<S>,
 }
 
 impl<S: Sleeper> AsyncClient<S> {
     /// Build an async client from a builder
-    pub fn from_builder(builder: Builder<S>) -> Result<Self, Error> {
+    pub fn from_builder(builder: Builder) -> Result<Self, Error> {
         let mut client_builder = Client::builder();
 
         #[cfg(not(target_arch = "wasm32"))]
@@ -75,7 +77,7 @@ impl<S: Sleeper> AsyncClient<S> {
             url: builder.base_url,
             client: client_builder.build()?,
             max_retries: builder.max_retries,
-            runtime: PhantomData,
+            marker: PhantomData,
         })
     }
 
@@ -84,7 +86,7 @@ impl<S: Sleeper> AsyncClient<S> {
             url,
             client,
             max_retries: crate::DEFAULT_MAX_RETRIES,
-            runtime: PhantomData,
+            marker: PhantomData,
         }
     }
 
@@ -451,15 +453,22 @@ fn is_status_retryable(status: reqwest::StatusCode) -> bool {
     RETRYABLE_ERROR_CODES.contains(&status.as_u16())
 }
 
-#[async_trait::async_trait]
+/// Trait that defines the ability to sleep within an async runtime
+#[async_trait]
 pub trait Sleeper {
-    async fn sleep(duration: std::time::Duration);
+    /// Wait until the specified `duration` has elapsed
+    async fn sleep(duration: Duration);
 }
 
-#[cfg(feature = "tokio")]
-#[async_trait::async_trait]
-impl Sleeper for crate::DefaultSleeper {
-    async fn sleep(duration: std::time::Duration) {
+/// Default sleeper. Note this may only be used as a [`Sleeper`] implementation
+/// if the "tokio" feature is enabled.
+#[derive(Debug, Clone, Copy)]
+pub struct DefaultSleeper;
+
+#[cfg(any(test, feature = "tokio"))]
+#[async_trait]
+impl Sleeper for DefaultSleeper {
+    async fn sleep(duration: Duration) {
         tokio::time::sleep(duration).await;
     }
 }

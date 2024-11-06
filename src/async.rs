@@ -11,11 +11,9 @@
 
 //! Esplora by way of `reqwest` HTTP client.
 
-use async_trait::async_trait;
 use std::collections::HashMap;
 use std::marker::PhantomData;
 use std::str::FromStr;
-use std::time::Duration;
 
 use bitcoin::consensus::{deserialize, serialize, Decodable, Encodable};
 use bitcoin::hashes::{sha256, Hash};
@@ -43,6 +41,7 @@ pub struct AsyncClient<S = DefaultSleeper> {
     /// Number of times to retry a request
     max_retries: usize,
 
+    /// Marker for the type of sleeper used
     marker: PhantomData<S>,
 }
 
@@ -453,22 +452,19 @@ fn is_status_retryable(status: reqwest::StatusCode) -> bool {
     RETRYABLE_ERROR_CODES.contains(&status.as_u16())
 }
 
-/// Trait that defines the ability to sleep within an async runtime
-#[async_trait]
-pub trait Sleeper {
-    /// Wait until the specified `duration` has elapsed
-    async fn sleep(duration: Duration);
+pub trait Sleeper: 'static {
+    type Sleep: std::future::Future<Output = ()>;
+    fn sleep(dur: std::time::Duration) -> Self::Sleep;
 }
 
-/// Default sleeper. Note this may only be used as a [`Sleeper`] implementation
-/// if the "tokio" feature is enabled.
 #[derive(Debug, Clone, Copy)]
 pub struct DefaultSleeper;
 
 #[cfg(any(test, feature = "tokio"))]
-#[async_trait]
 impl Sleeper for DefaultSleeper {
-    async fn sleep(duration: Duration) {
-        tokio::time::sleep(duration).await;
+    type Sleep = tokio::time::Sleep;
+
+    fn sleep(dur: std::time::Duration) -> Self::Sleep {
+        tokio::time::sleep(dur)
     }
 }

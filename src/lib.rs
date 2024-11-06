@@ -181,7 +181,7 @@ impl Builder {
     }
 
     /// Build an asynchronous client from builder
-    #[cfg(feature = "tokio")]
+    #[cfg(all(feature = "async", feature = "tokio"))]
     pub fn build_async(self) -> Result<AsyncClient, Error> {
         AsyncClient::from_builder(self)
     }
@@ -271,7 +271,6 @@ mod test {
             bitcoind::bitcoincore_rpc::json::AddressType, bitcoind::bitcoincore_rpc::RpcApi,
             electrum_client::ElectrumApi,
         },
-        r#async::DefaultSleeper,
         std::time::Duration,
         tokio::sync::OnceCell,
     };
@@ -330,8 +329,13 @@ mod test {
         let blocking_client = builder.build_blocking();
 
         let builder_async = Builder::new(&format!("http://{}", esplora_url));
+
+        #[cfg(feature = "tokio")]
+        let async_client = builder_async.build_async().unwrap();
+
+        #[cfg(not(feature = "tokio"))]
         let async_client = builder_async
-            .build_async_with_sleeper::<DefaultSleeper>()
+            .build_async_with_sleeper::<r#async::DefaultSleeper>()
             .unwrap();
 
         (blocking_client, async_client)
@@ -1005,7 +1009,7 @@ mod test {
         assert_eq!(tx, tx_async);
     }
 
-    #[cfg(feature = "tokio")]
+    #[cfg(all(feature = "async", feature = "tokio"))]
     #[test]
     fn use_builder_with_tokio_as_normal() {
         let builder = Builder::new("https://blockstream.info/testnet/api");
